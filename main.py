@@ -1,6 +1,6 @@
 import os
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Application, MessageHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Application, MessageHandler, filters
 import paramiko
 import json
 
@@ -11,6 +11,17 @@ SFTP_PORT = os.getenv('SFTP_PORT')
 SFTP_USERNAME = os.getenv('SFTP_USER')
 SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
 WHITELIST_PATH = 'whitelist.json'
+
+# Переменные окружения
+TOKEN = os.getenv('TELEGRAM_TOKEN')
+SFTP_HOST = 'solar.minerent.net'
+SFTP_PORT = 2022
+SFTP_USERNAME = 'maksimilari.dc4946dc'
+SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
+WHITELIST_PATH = 'whitelist.json'  # Уточните путь, если файл в подпапке
+
+# Создаем приложение
+application = Application.builder().token(TOKEN).build()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Привет! Отправь мне никнейм для добавления в вайтлист.')
@@ -54,23 +65,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f'Ник {username} уже есть в вайтлисте или произошла ошибка.')
 
-def main():
-    # Создаем приложение
-    application = Application.builder().token(TOKEN).build()
+# Регистрация обработчиков
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Добавляем обработчики
-    application.add_handler(CommandHandler("start", start))
-    from telegram.ext import filters
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+# Запуск вебхука
+port = int(os.environ.get("PORT", 8443))
+webhook_url = f"https://dulmine-bot.onrender.com/{TOKEN}"  # Замените на реальный URL после деплоя
 
-    # Настройка вебхука для Render
-    port = int(os.environ.get("PORT", 8443))
+# Эта часть запускается только если скрипт запущен напрямую (не через gunicorn)
+if __name__ == "__main__":
     application.run_webhook(
         listen="0.0.0.0",
         port=port,
         url_path=TOKEN,
-        webhook_url=f"https://dulmine-bot.onrender.com/{TOKEN}"  # Замените на ваш URL после деплоя
+        webhook_url=webhook_url
     )
-
-if __name__ == "__main__":
-    main()
