@@ -12,14 +12,6 @@ SFTP_USERNAME = os.getenv('SFTP_USER')
 SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
 WHITELIST_PATH = 'whitelist.json'
 
-# Переменные окружения
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-SFTP_HOST = 'solar.minerent.net'
-SFTP_PORT = 2022
-SFTP_USERNAME = 'maksimilari.dc4946dc'
-SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
-WHITELIST_PATH = 'whitelist.json'  # Уточните путь, если файл в подпапке
-
 # Создаем приложение
 application = Application.builder().token(TOKEN).build()
 
