@@ -4,12 +4,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import paramiko
 import json
 import requests
-from bs4 import BeautifulSoup
 
 TOKEN = os.getenv('TELEGRAM_TOKEN')
-SFTP_HOST = os.getenv('SFTP_HOST', 'solar.minerent.net')
-SFTP_PORT = int(os.getenv('SFTP_PORT', '2022'))
-SFTP_USERNAME = os.getenv('SFTP_USER', 'maksimilari.dc4946dc')
+SFTP_HOST = os.getenv('SFTP_HOST')
+SFTP_PORT = int(os.getenv('SFTP_PORT'))
+SFTP_USERNAME = os.getenv('SFTP_USER')
 SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
 WHITELIST_PATH = '/whitelist.json'
 
@@ -21,24 +20,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def get_uuid(username):
     try:
         print(f"Fetching UUID for username: {username}")
-        url = f"https://mcuuid.net/?q={requests.utils.quote(username)}"
-        print(f"Requesting URL: {url}")
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        print(f"Response status code: {response.status_code}")
-        print(f"Response text (first 200 chars): {response.text[:200]}...")
-        soup = BeautifulSoup(response.text, 'html.parser')
-        uuid_field = soup.find('input', id='results_id')
-        if uuid_field and 'value' in uuid_field.attrs and uuid_field['value'].strip():
-            uuid = uuid_field['value'].strip()
-            print(f"Found UUID from HTML: {uuid}")
-            return uuid
-
-        print("UUID not found in HTML, trying PlayerDB API")
         api_url = f"https://playerdb.co/api/player/minecraft/{requests.utils.quote(username)}"
+        print(f"Requesting PlayerDB API URL: {api_url}")
         api_response = requests.get(api_url, timeout=10)
         api_response.raise_for_status()
         data = api_response.json()
+        print(f"PlayerDB API response: {data}")
         if data.get('success') and data['data'].get('player'):
             uuid = data['data']['player'].get('id')
             if uuid:
@@ -48,9 +35,6 @@ def get_uuid(username):
                 print("No UUID found in PlayerDB response")
         else:
             print(f"PlayerDB API error: {data.get('error', 'Unknown error')}")
-
-        print("UUID field not found or empty on the page")
-        print("HTML content (simplified):", soup.prettify()[:500])
         return None
     except requests.RequestException as e:
         print(f"Network error fetching UUID: {e}")
@@ -105,7 +89,6 @@ def add_to_whitelist(username, uuid):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.text.strip()
-    # Проверяем, что ник состоит только из букв, цифр и _, и не длиннее 16 символов
     if not all(c.isalnum() or c == '_' for c in username) or len(username) > 16:
         await update.message.reply_text('Некорректный ник! Используй только буквы, цифры и подчеркивание, максимум 16 символов.')
         return
@@ -123,6 +106,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+# Запуск приложения
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8443))
     webhook_url = f"https://dulmine-bot.onrender.com/{TOKEN}"
