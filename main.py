@@ -7,7 +7,7 @@ import json
 # Переменные окружения
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 SFTP_HOST = os.getenv('SFTP_HOST')
-SFTP_PORT = int(os.getenv('SFTP_PORT', '2022'))
+SFTP_PORT = int(os.getenv('SFTP_PORT'))
 SFTP_USERNAME = os.getenv('SFTP_USER')
 SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
 WHITELIST_PATH = '/whitelist.json'
