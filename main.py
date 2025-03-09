@@ -83,12 +83,11 @@ def add_to_whitelist(username, uuid):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.text.strip()
-    # Проверяем, что ник состоит только из букв, цифр и _, и не длиннее 16 символов
     if not all(c.isalnum() or c == '_' for c in username) or len(username) > 16:
         await update.message.reply_text('Некорректный ник! Используй только буквы, цифры и подчеркивание, максимум 16 символов.')
         return
 
-    # Получаем UUID с сайта mcuuid.net
+
     uuid = get_uuid(username)
     if not uuid:
         await update.message.reply_text(f'Не удалось получить UUID для ника {username}. Возможно, ник неверный.')
@@ -99,11 +98,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f'Ник {username} уже есть в вайтлисте или произошла ошибка.')
 
-# Регистрация обработчиков
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# Запуск приложения
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8443))
     webhook_url = f"https://dulmine-bot.onrender.com/{TOKEN}"
