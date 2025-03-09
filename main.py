@@ -3,8 +3,9 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import paramiko
 import json
+import requests
+from bs4 import BeautifulSoup
 
-# Переменные окружения
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 SFTP_HOST = os.getenv('SFTP_HOST')
 SFTP_PORT = int(os.getenv('SFTP_PORT'))
@@ -12,11 +13,29 @@ SFTP_USERNAME = os.getenv('SFTP_USER')
 SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
 WHITELIST_PATH = '/whitelist.json'
 
-# Создаем приложение
 application = Application.builder().token(TOKEN).build()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Привет! Отправь мне никнейм для добавления в вайтлист.')
+
+def get_uuid(username):
+    try:
+        print(f"Fetching UUID for username: {username}")
+        url = f"https://mcuuid.net/?q={username}"
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        uuid_field = soup.find('input', id='results_id')
+        if uuid_field and 'value' in uuid_field.attrs:
+            uuid = uuid_field['value']
+            print(f"Found UUID: {uuid}")
+            return uuid
+        else:
+            print("UUID field not found on the page")
+            return None
+    except Exception as e:
+        print(f"Error fetching UUID: {e}")
+        return None
 
 def get_sftp_connection():
     try:
@@ -30,7 +49,7 @@ def get_sftp_connection():
         print(f"SFTP connection failed: {e}")
         raise
 
-def add_to_whitelist(username):
+def add_to_whitelist(username, uuid):
     try:
         sftp, transport = get_sftp_connection()
         try:
@@ -44,9 +63,9 @@ def add_to_whitelist(username):
             print("Starting with empty whitelist")
 
         if not any(player.get('name') == username for player in whitelist):
-            new_entry = {'uuid': 'offline-player-uuid', 'name': username}
+            new_entry = {'uuid': uuid, 'name': username}
             whitelist.append(new_entry)
-            print(f"Adding {username} to whitelist: {whitelist}")
+            print(f"Adding {username} with UUID {uuid} to whitelist: {whitelist}")
             with sftp.open(WHITELIST_PATH, 'w') as f:
                 json.dump(whitelist, f, indent=4)
             print(f"Successfully wrote to {WHITELIST_PATH}")
@@ -68,8 +87,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not all(c.isalnum() or c == '_' for c in username) or len(username) > 16:
         await update.message.reply_text('Некорректный ник! Используй только буквы, цифры и подчеркивание, максимум 16 символов.')
         return
-    if add_to_whitelist(username):
-        await update.message.reply_text(f'Ник {username} добавлен в вайтлист!')
+
+    # Получаем UUID с сайта mcuuid.net
+    uuid = get_uuid(username)
+    if not uuid:
+        await update.message.reply_text(f'Не удалось получить UUID для ника {username}. Возможно, ник неверный.')
+        return
+
+    if add_to_whitelist(username, uuid):
+        await update.message.reply_text(f'Ник {username} с UUID {uuid} добавлен в вайтлист!')
     else:
         await update.message.reply_text(f'Ник {username} уже есть в вайтлисте или произошла ошибка.')
 
@@ -79,7 +105,7 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 
 # Запуск приложения
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8443))  # Render предоставляет порт через $PORT
+    port = int(os.environ.get("PORT", 8443))
     webhook_url = f"https://dulmine-bot.onrender.com/{TOKEN}"
     print(f"Starting webhook on port {port} with URL {webhook_url}")
     application.run_webhook(

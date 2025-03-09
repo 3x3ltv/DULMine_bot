@@ -7,6 +7,8 @@ name = "pypi"
 telegram = "*"
 paramiko = "*"
 update = "*"
+requests = "*"
+bs4 = "*"
 
 [dev-packages]
 
