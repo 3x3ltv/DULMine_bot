@@ -73,7 +73,8 @@ def add_to_whitelist(username, uuid):
             whitelist.append(new_entry)
             print(f"Adding {username} with UUID {uuid} to whitelist: {whitelist}")
             with sftp.open(WHITELIST_PATH, 'w') as f:
-                json.dump(whitelist, f, indent=4)
+                json_data = json.dumps(whitelist, indent=4)
+                f.write(json_data)
             print(f"Successfully wrote to {WHITELIST_PATH}")
             sftp.close()
             transport.close()
